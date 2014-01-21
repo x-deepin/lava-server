@@ -18,20 +18,37 @@
 # along with Patchmetrics; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import _pythonpath
 import sys
+from optparse import make_option
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.management.base import BaseCommand
 
-from patchmetrics.crowd import (
+from crowd import (
     Crowd,
     CrowdException,
     CrowdNotFoundException,
 )
 
-if __name__ == '__main__':
-    if settings.AUTH_CROWD_APPLICATION_USER:
+class Command(BaseCommand):
+
+    help = "Migrate OpenID users to Crowd"
+    option_list = (
+        make_option('--really',
+                    action='store_true',
+                    default=False,
+                    help="Actually perform migration (default - dry run)"),
+    ) + BaseCommand.option_list
+
+    def handle(self, *args, **options):
+        if not options["really"]:
+            print "WARNING: Dry run mode"
+
+        if not settings.AUTH_CROWD_APPLICATION_USER:
+            sys.stderr.write("No Crowd credentials found.\n")
+            return -1
+
         crwd = Crowd(settings.AUTH_CROWD_APPLICATION_USER,
                      settings.AUTH_CROWD_APPLICATION_PASSWORD,
                      settings.AUTH_CROWD_SERVER_REST_URI)
@@ -63,6 +80,6 @@ if __name__ == '__main__':
                     pass
                 except CrowdException, ex:
                     sys.stderr.write("{0}\n".format(str(ex)))
-    else:
-        sys.stderr.write("No Crowd credentials found.\n")
-        sys.exit(1)
+
+        if not options["really"]:
+            print "WARNING: Dry run mode"
