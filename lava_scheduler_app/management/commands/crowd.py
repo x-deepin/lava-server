@@ -215,7 +215,7 @@ class Crowd(object):
             CrowdUnauthorizedException if status is 401, and CrowdException
             in other cases.
         """
-        connection = httplib.HTTPSConnection(self._host, self._port)
+        connection = httplib.HTTPSConnection(self._host, str(self._port))
         connection.request("GET", api_url, headers=self._headers)
         resp = connection.getresponse()
 
