@@ -64,7 +64,11 @@ class Command(BaseCommand):
                 total_users += 1
                 crowd_usr = None
                 try:
-                    crowd_usr = crwd.get_user(user.email)
+                    try:
+                        crowd_usr = crwd.get_user(user.email)
+                    except CrowdNotFoundException:
+                        crowd_usr = crwd.get_user_by_realname(user.first_name, user.last_name)
+                        print "Matched by realname"
                     matched_users += 1
                     if crowd_usr.name != user.username:
                         if len(user.email) > 255:
@@ -87,7 +91,6 @@ class Command(BaseCommand):
                     print "User not found in Crowd"
                 except CrowdException, ex:
                     sys.stderr.write("{0}\n".format(str(ex)))
-
         print "Total Django users: %d, matched Crowd users: %d, migrated users: %d" % (total_users, matched_users, migrated_users)
 
         if not options["really"]:

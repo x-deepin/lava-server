@@ -158,6 +158,20 @@ class Crowd(object):
         resource = "/user?{0}".format(urllib.urlencode(params))
         return CrowdUser.from_json_s(self._get_rest_usermanagement(resource))
 
+    def get_user_by_realname(self, first_name, last_name):
+        uri = "/search.json?restriction=firstName%3D{}+AND+lastName%3D{}&entity-type=user"
+        uri = uri.format(urllib.quote(first_name.encode("utf8")), urllib.quote(last_name.encode("utf8")))
+        data = json.loads(self._get_rest_usermanagement(uri))
+        if not data["users"]:
+            raise CrowdNotFoundException
+        if len(data["users"]) > 1:
+            print "More than one matching user - ignored"
+            raise CrowdNotFoundException
+        name = data["users"][0]["name"]
+        # Only username is provided by search, not other properties,
+        # so we recursively fetch them.
+        return self.get_user(name)
+
     def get_user_with_groups(self, email):
         """Gets all the groups a user is member of.
 
