@@ -53,12 +53,19 @@ class Command(BaseCommand):
                      settings.AUTH_CROWD_APPLICATION_PASSWORD,
                      settings.AUTH_CROWD_SERVER_REST_URI)
 
+        total_users = 0
+        matched_users = 0
+        migrated_users = 0
         users = User.objects.all().distinct()
         for user in users:
             if user and (user.is_active and user.email):
+                print
+                print "Processing:", user.username, user.email
+                total_users += 1
                 crowd_usr = None
                 try:
                     crowd_usr = crwd.get_user(user.email)
+                    matched_users += 1
                     if crowd_usr.name != user.username:
                         if len(user.email) > 255:
                             sys.stderr.write(
@@ -77,11 +84,11 @@ class Command(BaseCommand):
                                 user.save()
                             migrated_users += 1
                 except CrowdNotFoundException:
-                    # Silently ignore, user is not in Crowd we can't really do
-                    # much here.
-                    pass
+                    print "User not found in Crowd"
                 except CrowdException, ex:
                     sys.stderr.write("{0}\n".format(str(ex)))
+
+        print "Total Django users: %d, matched Crowd users: %d, migrated users: %d" % (total_users, matched_users, migrated_users)
 
         if not options["really"]:
             print "WARNING: Dry run mode"
