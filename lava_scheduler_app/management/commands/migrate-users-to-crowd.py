@@ -55,6 +55,7 @@ class Command(BaseCommand):
 
         total_users = 0
         matched_users = 0
+        matched_by_realname = 0
         migrated_users = 0
         users = User.objects.all().distinct()
         for user in users:
@@ -69,6 +70,7 @@ class Command(BaseCommand):
                     except CrowdNotFoundException:
                         crowd_usr = crwd.get_user_by_realname(user.first_name, user.last_name)
                         print "Matched by realname"
+                        matched_by_realname += 1
                     matched_users += 1
                     if crowd_usr.name != user.username:
                         if len(user.email) > 255:
@@ -91,7 +93,9 @@ class Command(BaseCommand):
                     print "User not found in Crowd"
                 except CrowdException, ex:
                     sys.stderr.write("{0}\n".format(str(ex)))
-        print "Total Django users: %d, matched Crowd users: %d, migrated users: %d" % (total_users, matched_users, migrated_users)
+
+        print "Total Django users: %d, matched Crowd users: %d (by realname: %d), migrated users: %d" \
+              % (total_users, matched_users, matched_by_realname, migrated_users)
 
         if not options["really"]:
             print "WARNING: Dry run mode"
