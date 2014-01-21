@@ -73,7 +73,9 @@ class Command(BaseCommand):
                             # like have an email with capital letters that
                             # shouldn't be.
                             user.username = crowd_usr.emails[0]
-                            user.save()
+                            if options["really"]:
+                                user.save()
+                            migrated_users += 1
                 except CrowdNotFoundException:
                     # Silently ignore, user is not in Crowd we can't really do
                     # much here.
