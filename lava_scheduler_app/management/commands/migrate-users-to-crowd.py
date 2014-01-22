@@ -39,6 +39,11 @@ class Command(BaseCommand):
                     action='store_true',
                     default=False,
                     help="Actually perform migration (default - dry run)"),
+        make_option('--by-realname',
+                    action='store_true',
+                    default=False,
+                    help="Try to match users by realname in addition to email "
+                         "(may have unexpected results, like dup accounts!)"),
     ) + BaseCommand.option_list
 
     def handle(self, *args, **options):
@@ -68,6 +73,8 @@ class Command(BaseCommand):
                     try:
                         crowd_usr = crwd.get_user(user.email)
                     except CrowdNotFoundException:
+                        if not options["by_realname"]:
+                            raise
                         crowd_usr = crwd.get_user_by_realname(user.first_name, user.last_name)
                         print "Matched by realname"
                         matched_by_realname += 1
