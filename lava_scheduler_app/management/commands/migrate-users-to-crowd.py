@@ -24,6 +24,8 @@ from optparse import make_option
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.db import IntegrityError
 
 from crowd import (
     Crowd,
@@ -46,7 +48,9 @@ class Command(BaseCommand):
                          "(may have unexpected results, like dup accounts!)"),
     ) + BaseCommand.option_list
 
+    @transaction.commit_manually
     def handle(self, *args, **options):
+      try:
         if not options["really"]:
             print "WARNING: Dry run mode"
 
@@ -62,6 +66,8 @@ class Command(BaseCommand):
         matched_users = 0
         matched_by_realname = 0
         migrated_users = 0
+        dup_usernames = 0
+        integrity_errors = 0
         users = User.objects.all().distinct()
         for user in users:
             if user and (user.is_active and user.email):
@@ -92,17 +98,38 @@ class Command(BaseCommand):
                             # Use the email from crowd, since some users looks
                             # like have an email with capital letters that
                             # shouldn't be.
-                            user.username = crowd_usr.emails[0]
-                            if options["really"]:
-                                user.save()
-                            migrated_users += 1
+
+                            existing_user = User.objects.filter(username=crowd_usr.emails[0])
+                            if existing_user:
+                                dup_usernames += 1
+                            else:
+                                user.username = crowd_usr.emails[0]
+                                try:
+                                    user.save()
+                                    migrated_users += 1
+                                except IntegrityError as e:
+                                    print e
+                                    integrity_errors += 1
                 except CrowdNotFoundException:
                     print "User not found in Crowd"
                 except CrowdException, ex:
                     sys.stderr.write("{0}\n".format(str(ex)))
 
-        print "Total Django users: %d, matched Crowd users: %d (by realname: %d), migrated users: %d" \
-              % (total_users, matched_users, matched_by_realname, migrated_users)
+        print "Total Django users: %d\n" \
+              "Matched Crowd users: %d (including by realname: %d)\n" \
+              "Migrated users: %d\n" \
+              "Would-be dup usernames: %d\n" \
+              "Integrity errors: %d" % (total_users, matched_users, matched_by_realname,
+                                        migrated_users, dup_usernames, integrity_errors)
 
         if not options["really"]:
             print "WARNING: Dry run mode"
+            transaction.rollback()
+        else:
+            transaction.commit()
+
+      except Exception as e:
+        import traceback
+        traceback.print_exc()
+        transaction.rollback()
+        raise
