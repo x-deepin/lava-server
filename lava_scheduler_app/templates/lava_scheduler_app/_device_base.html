@@ -67,7 +67,7 @@
       <dd>{{ device.get_description|default:"<i>None</i>"|truncatewords_html:200|wordwrap:80|linebreaksbr }}</dd>
       <dt>Tags</dt>
     {% for tag in device.tags.all %}
-      <dd>{{ tag.name }}
+      <dd class="tag-name">{{ tag.name }}
       {% if tag.description %}
         <abbr title="{{ tag.description }}">(?)</abbr>
       {% endif %}
